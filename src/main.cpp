@@ -28,34 +28,113 @@ NumericalFunction rungekutta(double y0, double h, uint max_n) {
     NumericalFunction constructed_function;
 
     double y_n = y0;
-    double t_n = 0;
+    double x_n = 0;
 
-    constructed_function.x.push_back(t_n);
+    constructed_function.x.push_back(x_n);
     constructed_function.y.push_back(y_n);
 
-    std::cout << t_n << "\t" << y_n << std::endl;
+    std::cout << x_n << "\t" << y_n << std::endl;
 
     for (size_t n = 1; n < max_n; n++)
     {
-        double k1 = func(t_n, y_n);
-        double k2 = func(t_n + h/2.0, y_n + h*k1/2.0);
-        double k3 = func(t_n + h/2.0, y_n + h*k2/2.0);
-        double k4 = func(t_n + h, y_n + h*k3);
+        double k1 = func(x_n, y_n);
+        double k2 = func(x_n + h/2.0, y_n + h*k1/2.0);
+        double k3 = func(x_n + h/2.0, y_n + h*k2/2.0);
+        double k4 = func(x_n + h, y_n + h*k3);
 
         y_n = y_n + h/6.0*(k1 + 2*k2 + 2*k3 + k4);
-        t_n = t_n + h;
+        x_n = x_n + h;
 
-        constructed_function.x.push_back(t_n);
+        constructed_function.x.push_back(x_n);
         constructed_function.y.push_back(y_n);
 
-        std::cout << t_n << "\t" << y_n << std::endl;
+        std::cout << x_n << "\t" << y_n << std::endl;
     }
     
     return constructed_function;
 }
 
+double funcSecond(double x, double y0, double y1) {
+    double hbar = 1.054571817e-34; // Js
+    double m_e = 9.1093837139e-31; // kg
+
+    return -1.577e8*y0; // kg*J/(Js)^2
+}
+
+NumericalFunction rungekuttanystrom() {
+    NumericalFunction constructed_function;
+
+    double hbar = 1.054571817e-34; // Js
+    double m_e = 9.1093837139e-31; // kg
+
+    double h = 0.0001e-3; // m
+
+    double y0_n = 0; // unitless
+    double y1_n = 1; // 1/m
+
+    double x_n = 0; // m
+
+    constructed_function.x.push_back(x_n);
+    constructed_function.y.push_back(y0_n);
+
+    std::cout << x_n << "\t" << y0_n << std::endl;
+
+    for (size_t n = 1; n < 10001; n++)
+    {
+        double k1 = funcSecond(x_n, y0_n, y1_n);
+
+        double ydk1 = y1_n + k1*h/2;
+        double yk1 = y0_n + h/2*((y1_n+ydk1)/2);
+        double k2 = funcSecond(x_n + h/2, yk1, ydk1);
+
+        double ydk2 = y1_n + k2*h/2;
+        double yk2 = y0_n + h/2*((y1_n + ydk2)/2);
+        double k3 = funcSecond(x_n + h/2, yk2, ydk2);
+
+        double ydk3 = y1_n + k3*h;
+        double yk3 = y0_n + h*((y1_n + ydk3)/2);
+        double k4 = funcSecond(x_n + h, yk3, ydk3);
+
+        double ydk4 = y1_n + k4*h;
+        
+        y1_n = y1_n + h/6*(k1 + 2*k2 + 2*k3 + k4);
+        y0_n = y0_n + h/6*(ydk1 + 2*ydk2 + 2*ydk3 + ydk4);
+        x_n = x_n + h;
+
+        constructed_function.x.push_back(x_n);
+        constructed_function.y.push_back(y0_n);
+
+        std::cout << x_n << "\t" << y0_n << std::endl;
+    }
+    
+    return constructed_function;
+}
+
+NumericalFunction normalizeWavefunction(NumericalFunction input) {
+    NumericalFunction output;
+    double L = 0.0001e-3*1001;
+    double total_integral = 0;
+    for (size_t i = 1; i < input.x.size(); i++)
+    {
+        double previous = std::pow(input.y[i-1], 2);
+        double current = std::pow(input.y[i], 2);
+        total_integral += (input.x[i]-input.x[i-1])/L*(previous+current)/2;
+    }
+
+    double correction_factor = std::sqrt(total_integral);
+    for (size_t i = 0; i < input.x.size(); i++)
+    {
+        output.x.push_back(input.x[i]);
+        output.y.push_back(input.y[i]/correction_factor);
+    }
+    std::cout << output.y[input.x.size()-1] << std::endl;
+    return output;
+}
+
 int main() {
-    NumericalFunction result = rungekutta(2, 0.5, 11);
+    NumericalFunction result = rungekuttanystrom();
+    result = normalizeWavefunction(result);
     writeCSV(result, "numerical.csv");
+
     return 0;
 }
