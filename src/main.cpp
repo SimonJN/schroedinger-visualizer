@@ -147,7 +147,7 @@ int numRoots(NumericalFunction input) {
 int main() {
     NumericalFunction params;
 
-    for (size_t i = 1; i < 10; i++)
+    for (size_t i = 1; i < 20; i++)
     {
         NumericalFunction result;
         result = rungekuttanystrom();
